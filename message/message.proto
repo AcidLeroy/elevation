@@ -1,0 +1,11 @@
+syntax = "proto3";
+package message;
+
+message ElevationQuery {
+  message LatLonAlt {
+    double latitude = 1;
+    double longitude = 2;
+    double altitude = 3;
+  }
+  repeated LatLonAlt query_list = 1;
+}
