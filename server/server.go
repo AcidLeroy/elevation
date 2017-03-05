@@ -14,7 +14,6 @@ import (
 // Function that starts the elevation service endpoint. The only valid
 // url at this point is a POST method to "/elevations/" endpoint
 func Start() {
-
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/", Index)
 	router.HandleFunc("/elevations/", GetElevationsEndpoint).Methods("POST")
@@ -33,28 +32,34 @@ func GetElevationsEndpoint(w http.ResponseWriter, r *http.Request) {
 	log.Printf("The type of the message is: %s", r.Method)
 	dataBuffer, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Fatal("There was an error reading the databuffer!", err)
+		log.Print("There was an error reading the databuffer!", err)
+		return
 	}
 
 	log.Printf("The size of the body is: %d", r.ContentLength)
-
 	elevationsRetrieved := &message.ElevationQuery{}
 	err = proto.Unmarshal(dataBuffer, elevationsRetrieved)
 	if err != nil {
-		log.Fatal("unmarshaling error: ", err)
+		message := "Could not convert message received by client to a protobuf"
+		log.Print(message, err)
+		fmt.Fprint(w, message, err)
+		return
 	}
 
 	log.Printf("Asking for %d elevations.", len(elevationsRetrieved.GetQueryList()))
 	log.Println("Asking for the following Latitudes and Longitudes: ")
-	for _, latlonalt := range elevationsRetrieved.GetQueryList() {
-		log.Printf("Latitude = %f, Longitude = %f", latlonalt.Latitude, latlonalt.Longitude)
-		latlonalt.Altitude = 666 // assign dummy value for now.
-	}
+
+	// Use dummy look up for now
+	lookup := DummyLookup{defaultValue: 111}
+	var elevationResults message.ElevationQuery
+	elevationResults, err = lookup.Retrieve(elevationsRetrieved)
 
 	// Marshall new data
-	data, err := proto.Marshal(elevationsRetrieved)
+	data, err := proto.Marshal(&elevationResults)
 	if err != nil {
-		log.Fatal("marshaling error: ", err)
+		log.Print("Error converting elevations to send to client")
+		fmt.Fprint(w, "Error converting elevations to send to client")
+		return
 	}
 
 	//	fmt.Fprint(w, data)
